@@ -27,6 +27,26 @@ smartly repositions and flips upward near the bottom so it always stays on-scree
 
 > Works in **Brave** and other Chromium browsers (Chrome, Edge, Opera, Arc).
 
+## Screenshots
+
+<p align="center">
+  <img alt="Floating bubble" src="screenshots/lucclock-01-bubble.png" width="45%">
+  &nbsp;&nbsp;
+  <img alt="Clock panel" src="screenshots/lucclock-02-clock-panel.png" width="45%">
+</p>
+
+<p align="center">
+  <img alt="Timer" src="screenshots/lucclock-03-timer.png" width="45%">
+  &nbsp;&nbsp;
+  <img alt="Pomodoro" src="screenshots/lucclock-04-pomodoro.png" width="45%">
+</p>
+
+<p align="center">
+  <img alt="Settings" src="screenshots/lucclock-05-settings.png" width="45%">
+  &nbsp;&nbsp;
+  <img alt="Dark theme running focus" src="screenshots/lucclock-06-dark-running.png" width="45%">
+</p>
+
 ## Why LucClock?
 
 Clocks are everywhere, but few exist as a *polished, always-available floating extension* —

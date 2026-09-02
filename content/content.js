@@ -38,7 +38,7 @@
 .fct-bubble-date { font-size:10px; color:var(--fct-muted); text-transform:uppercase; letter-spacing:.06em; }
 .fct-bubble[data-countdown="running"] .fct-bubble-clock { color:var(--fct-accent); }
 .fct-bubble[data-countdown="running"] .fct-bubble-date { color:var(--fct-accent); font-weight:600; letter-spacing:.05em; }
-.fct-panel { position:fixed; left:0; top:0; width:380px; max-width:calc(100vw - 24px); background:var(--fct-bg); border:1px solid var(--fct-border); border-radius:12px; box-shadow:var(--fct-shadow); color:var(--fct-text); font-size:14px; overflow:hidden; opacity:0; transform:scale(.96); transform-origin:top center; transition:opacity 160ms ease-out, transform 160ms ease-out; }
+.fct-panel { position:fixed; width:380px; max-width:calc(100vw - 24px); background:var(--fct-bg); border:1px solid var(--fct-border); border-radius:12px; box-shadow:var(--fct-shadow); color:var(--fct-text); font-size:14px; overflow:hidden; opacity:0; transform:scale(.96); transform-origin:top center; transition:opacity 160ms ease-out, transform 160ms ease-out; }
 .fct-panel.fct-open { opacity:1; transform:scale(1); }
 .fct-panel.fct-panel-up { transform-origin:bottom center; }
 .fct-panel-head { display:flex; align-items:center; padding:8px 8px 0 8px; gap:6px; }
