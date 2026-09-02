@@ -1,0 +1,13 @@
+{
+  "name": "lucclock",
+  "version": "1.0.0",
+  "description": "A calm, minimal 24-hour clock with timer and pomodoro that floats on every tab (browser extension, MV3).",
+  "private": true,
+  "scripts": {
+    "test": "node test/run.js",
+    "check": "node --check content/content.js && node --check background/service-worker.js && node --check lib/storage.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  }
+}

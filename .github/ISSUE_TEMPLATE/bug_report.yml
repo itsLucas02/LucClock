@@ -1,0 +1,32 @@
+---
+name: Bug report
+about: Report something not working as expected
+title: "[Bug] "
+labels: bug
+assignees: ''
+---
+
+**Describe the bug**
+A clear, concise description of what's wrong.
+
+**To reproduce**
+Steps:
+1. Go to '...'
+2. Click '...'
+3. Scroll to '...'
+4. See error
+
+**Expected behaviour**
+What you expected to happen.
+
+**Actual behaviour**
+What actually happened (screenshots/video help a lot).
+
+**Environment**
+- Browser (Brave/Chrome/Edge etc.) and version:
+- OS:
+- LucClock version (from the extensions page):
+- Loaded unpacked? Yes / No
+
+**Additional context**
+Anything else — console errors (`Ctrl+Shift+J`), extension conflicts, etc.
