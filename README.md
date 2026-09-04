@@ -63,18 +63,33 @@ most are browser-UI mods or clunky popups. LucClock is a deliberate, calm little
 - **Isolated & safe** — injected in a shadow DOM so it never touches page styles or scripts
 - **Accessible & keyboard-friendly** — Esc, arrow keys, focus outlines, reduced-motion aware
 
-## Install (unpacked)
+## Download & install (no clone needed)
 
-Because it's plain JavaScript with **no build step**, you can load it straight from source:
+**1. Grab the latest package**
 
-1. Clone this repo (or download & extract it).
-2. Open `brave://extensions` (or `chrome://extensions`).
-3. Toggle **Developer mode** on (top-right).
-4. Click **Load unpacked** and select the repo folder.
-5. The LucClock bubble appears bottom-right on every page.
+Download the newest release zip from the
+**[Releases](https://github.com/itsLucas02/LucClock/releases)** page — it's a ready-to-load
+package (no building, no dependencies). You can also grab it from the assets under each
+release tag.
 
-> When loaded unpacked, keep the folder in place and hit **Reload** on the extension card
-> after pulling changes.
+**2. Unzip it**
+
+Extract the zip somewhere permanent, e.g. `~/LucClock` or `Documents/LucClock`.
+Keep that folder — the browser reads from it.
+
+**3. Load it into Brave (or Chrome / Edge / Arc)**
+
+1. Open `brave://extensions` — or `chrome://extensions` in other Chromium browsers.
+2. Toggle **Developer mode** on (top-right corner).
+3. Click **Load unpacked**.
+4. Select the `lucclock-<version>` folder you unzipped.
+5. Done — the clock bubble appears at the bottom-right of every page.
+
+To **update** later, unzip the new version over the folder and click the **Reload** icon on
+the extension card in `brave://extensions`.
+
+> **Want to run from source instead?** Clone this repo and do the same *Load unpacked* steps,
+> selecting the repo folder. It's plain JavaScript with no build step.
 
 ## Using it
 

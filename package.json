@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "test": "node test/run.js",
-    "check": "node --check content/content.js && node --check background/service-worker.js && node --check lib/storage.js"
+    "check": "node --check content/content.js && node --check background/service-worker.js && node --check lib/storage.js",
+    "build:release": "node scripts/build-release.js"
   },
   "devDependencies": {
     "jsdom": "^24.0.0"

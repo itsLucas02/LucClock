@@ -18,3 +18,6 @@ desktop.ini
 # Scratch / local
 *.tmp
 scratch/
+
+# Build output (release packages)
+dist/
