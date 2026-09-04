@@ -146,6 +146,7 @@
   let settings = { ...DEFAULT_SETTINGS };
   let countdown = { ...DEFAULT_COUNTDOWN };
   let widgetState = { x: null, y: null, expanded: false, activeTab: "clock" };
+  let instanceId = null;
 
   let host;
   let root;
@@ -286,7 +287,7 @@
     renderActiveTab();
   }
 
-  function switchToTab(name) {
+  function switchToTab(name, opts = {}) {
     widgetState.activeTab = name;
     els.tabs.forEach((t) => {
       const selected = t.dataset.tab === name;
@@ -295,6 +296,7 @@
     });
     renderActiveTab();
     if (widgetState.expanded) positionPanel();
+    if (!opts.silent) saveWidgetStateSafe();
   }
 
   function renderActiveTab() {
@@ -370,7 +372,39 @@
   }
 
   function saveWidgetStateSafe() {
-    saveWidgetState(widgetState).catch(() => {});
+    saveWidgetState(widgetState, instanceId).catch(() => {});
+  }
+
+  // Visually adopt widget state that another tab changed (no write back, so no
+  // echo loop — the origin guard in onStorageChanged already did the filtering).
+  function applyWidgetStateUI() {
+    if (!els.panel) return;
+    const panel = els.panel;
+    if (panel) {
+      if (panelCloseTimer) {
+        clearTimeout(panelCloseTimer);
+        panelCloseTimer = null;
+      }
+      if (widgetState.expanded) {
+        panel.hidden = false;
+        panel.classList.add("fct-open");
+        positionPanel();
+      } else {
+        panel.classList.remove("fct-open");
+        panel.hidden = true;
+      }
+    }
+    if (els.bubble) {
+      els.bubble.setAttribute("aria-expanded", String(!!widgetState.expanded));
+    }
+    switchToTab(widgetState.activeTab, { silent: true });
+    if (widgetState.x != null && widgetState.y != null) {
+      const c = clampWidgetPosition(widgetState.x, widgetState.y);
+      widgetState.x = c.x;
+      widgetState.y = c.y;
+      host.style.left = `${widgetState.x}px`;
+      host.style.top = `${widgetState.y}px`;
+    }
   }
 
   function initDrag() {
@@ -510,6 +544,15 @@
 
   function onStorageChanged(changes, area) {
     if (area !== "local") return;
+    // Re-read settings if another tab changed them.
+    if (changes.settings) {
+      settings = { ...DEFAULT_SETTINGS, ...(changes.settings.newValue || {}) };
+      refreshSettings();
+      applyTheme();
+      applyAccent();
+      updateClock();
+    }
+
     if (changes[COUNTDOWN_STORAGE_KEY]) {
       const newVal = changes[COUNTDOWN_STORAGE_KEY].newValue;
       if (!newVal) {
@@ -524,6 +567,23 @@
           refreshCountdownView();
         }
       }
+    }
+
+    // Widget UI state (open/close, active tab, position) synced from peers.
+    // We intentionally apply it visually WITHOUT writing back to avoid loops.
+    const lastChange = changes[LAST_WRITER_KEY];
+    const lastWriter = lastChange ? lastChange.newValue : null;
+    const hasWidgetChange = Object.keys(changes).some((k) =>
+      k.startsWith(STORAGE_KEY_PREFIX) && k !== LAST_WRITER_KEY,
+    );
+    if (hasWidgetChange && lastWriter !== instanceId) {
+      loadWidgetState().then((fresh) => {
+        widgetState.expanded = fresh.expanded;
+        widgetState.activeTab = fresh.activeTab;
+        widgetState.x = fresh.x;
+        widgetState.y = fresh.y;
+        if (els.panel) applyWidgetStateUI();
+      });
     }
   }
 
@@ -688,10 +748,11 @@
   async function mount() {
     try {
       injectDom();
-      [settings, countdown, widgetState] = await Promise.all([
+      [settings, countdown, widgetState, instanceId] = await Promise.all([
         loadSettings(),
         loadCountdown(),
         loadWidgetState(),
+        loadInstanceId(),
       ]);
 
       collectEls();
@@ -728,6 +789,42 @@
 
       window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
       chrome.storage.onChanged.addListener(onStorageChanged);
+
+      // Reconcile with peers when the tab becomes visible again (covers tabs
+      // that were backgrounded or resumed and missed live changes).
+      const reconcile = () => {
+        Promise.all([loadSettings(), loadCountdown(), loadWidgetState(), loadLastWriter()]).then(
+          ([s, cd, ws, lastWriter]) => {
+            if (lastWriter === instanceId) return;
+            settings = s;
+            countdown = cd;
+            if (countdown.running && countdown.endsAt) {
+              countdown.remainingMs = Math.max(0, countdown.endsAt - Date.now());
+            }
+            widgetState.expanded = ws.expanded;
+            widgetState.activeTab = ws.activeTab;
+            widgetState.x = ws.x;
+            widgetState.y = ws.y;
+            refreshSettings();
+            applyTheme();
+            applyAccent();
+            refreshCountdownView();
+            if (countdown.running && countdown.endsAt) startUiLoop();
+            if (widgetState.x != null && widgetState.y != null) {
+              const cc = clampWidgetPosition(widgetState.x, widgetState.y);
+              widgetState.x = cc.x;
+              widgetState.y = cc.y;
+              host.style.left = `${widgetState.x}px`;
+              host.style.top = `${widgetState.y}px`;
+            }
+            applyWidgetStateUI();
+          },
+        );
+      };
+      window.addEventListener("focus", reconcile);
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) reconcile();
+      });
 
       // Keep the bubble on-screen and the open panel in view when the viewport changes.
       window.addEventListener("resize", () => {

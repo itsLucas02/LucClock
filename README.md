@@ -25,6 +25,11 @@ While a countdown runs, the pill swaps its date line for the live remaining time
 (`FOCUS 24:12`) so the bubble never bloats. Drag it to **any** screen edge — the panel
 smartly repositions and flips upward near the bottom so it always stays on-screen.
 
+**One clock across every tab.** LucClock is deliberately *not* a per-tab widget: start a
+pomodoro, open the panel, switch to the timer tab, or drag the bubble in any tab and every
+other open tab follows instantly — they're all views of the same shared state. Close or
+switch tabs freely; the clock and your timers are never "stuck" on the page you started them.
+
 > Works in **Brave** and other Chromium browsers (Chrome, Edge, Opera, Arc).
 
 ## Screenshots

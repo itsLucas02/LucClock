@@ -24,19 +24,27 @@ function check(name, cond) {
 // ---------------------------------------------------------------------------
 // Content-script harness
 // ---------------------------------------------------------------------------
-function makeDom() {
+// A "storage backend" is a shared { store, listeners } pair. Passing the same
+// backend to two makeDom() calls simulates two tabs sharing chrome.storage.
+function makeStorageBackend() {
+  const store = {};
+  const listeners = [];
+  return { store, listeners };
+}
+
+function makeDom(backend) {
+  const b = backend || makeStorageBackend();
   const dom = new JSDOM("<!DOCTYPE html><html><body></body></html>", {
     url: "https://example.com/",
     pretendToBeVisual: true,
     runScripts: "dangerously",
   });
-  const store = {};
-  const listeners = [];
   const sent = [];
   const chromeMock = {
     storage: {
       local: {
         async get(keys) {
+          const store = b.store;
           if (keys === undefined) return { ...store };
           const arr = Array.isArray(keys) ? keys : [keys];
           const out = {};
@@ -44,25 +52,32 @@ function makeDom() {
           return out;
         },
         async set(obj) {
+          const store = b.store;
+          const changes = {};
           for (const [k, v] of Object.entries(obj)) {
             const nv = JSON.parse(JSON.stringify(v));
             if (JSON.stringify(store[k]) !== JSON.stringify(v)) {
-              listeners.forEach((cb) => cb({ [k]: { oldValue: store[k], newValue: nv } }, "local"));
+              changes[k] = { oldValue: store[k], newValue: nv };
               store[k] = JSON.parse(JSON.stringify(v));
             }
           }
+          // Real chrome.storage fires ONE onChanged per set(), with every key.
+          if (Object.keys(changes).length) {
+            b.listeners.forEach((cb) => cb(changes, "local"));
+          }
         },
         async remove(keys) {
+          const store = b.store;
           const arr = Array.isArray(keys) ? keys : [keys];
           for (const k of arr) {
             if (k in store) {
-              listeners.forEach((cb) => cb({ [k]: { oldValue: store[k], newValue: undefined } }, "local"));
+              b.listeners.forEach((cb) => cb({ [k]: { oldValue: store[k], newValue: undefined } }, "local"));
               delete store[k];
             }
           }
         },
       },
-      onChanged: { addListener: (cb) => listeners.push(cb) },
+      onChanged: { addListener: (cb) => b.listeners.push(cb) },
     },
     runtime: { async sendMessage(m) { sent.push(m); return { ok: true }; } },
   };
@@ -83,7 +98,7 @@ function makeDom() {
   const load = (f) => dom.window.document.body.appendChild(
     Object.assign(dom.window.document.createElement("script"), { textContent: fs.readFileSync(path.join(ROOT, f), "utf8") })
   );
-  return { dom, load, store, sent };
+  return { dom, load, sent, backend: b };
 }
 
 async function contentTests() {
@@ -157,11 +172,83 @@ async function contentTests() {
   check("ArrowRight selects Timer", active.dataset.tab === "timer");
 }
 
+async function twoTabSyncTests() {
+  console.log("\n== cross-tab sync ==");
+  const backend = makeStorageBackend();
+  const tabA = makeDom(backend);
+  const tabB = makeDom(backend);
+  for (const t of [tabA, tabB]) {
+    t.load("lib/storage.js");
+    t.load("content/content.js");
+  }
+  // Let both mount fully (each reads shared state + gets its instanceId).
+  await new Promise((r) => setTimeout(r, 150));
+
+  const shA = tabA.dom.window.document.getElementById("fct-root").shadowRoot;
+  const shB = tabB.dom.window.document.getElementById("fct-root").shadowRoot;
+  const get = (sh) => ({
+    expanded: sh.querySelector(".fct-panel").classList.contains("fct-open"),
+    active: [...sh.querySelectorAll(".fct-tab")].find((t) => t.getAttribute("aria-selected") === "true").dataset.tab,
+    bubble: sh.querySelector(".fct-bubble-date").textContent.trim(),
+    chip: sh.querySelector(".fct-bubble").dataset.countdown,
+  });
+
+  const sA = get(shA);
+  const sB = get(shB);
+  check("both tabs start collapsed", !sA.expanded && !sB.expanded);
+
+  // Tab A opens the panel + switches to Pomodoro -> Tab B follows.
+  const fire = (dom, el, type) => el.dispatchEvent(new dom.window.MouseEvent(type, { bubbles: true }));
+  fire(tabA.dom, shA.querySelector(".fct-bubble"), "click");
+  await new Promise((r) => setTimeout(r, 30));
+  fire(tabA.dom, shA.querySelector('.fct-tab[data-tab="pomodoro"]'), "click");
+  await new Promise((r) => setTimeout(r, 120));
+  check("B opens when A opens", get(shB).expanded === true);
+  check("B follows active tab", get(shB).active === "pomodoro");
+
+  // No echo loop: A did not get flipped back / re-closed by its own change.
+  check("A stays open after own change", get(shA).expanded === true);
+  check("A stays on pomodoro", get(shA).active === "pomodoro");
+
+  // Tab B collapses -> Tab A follows.
+  fire(tabB.dom, shB.querySelector(".fct-collapse"), "click");
+  await new Promise((r) => setTimeout(r, 250));
+  check("A collapses when B collapses", get(shA).expanded === false);
+
+  // Tab A changes theme to dark -> both theme selects + host update.
+  const selA = shA.querySelector(".fct-theme");
+  selA.value = "dark";
+  selA.dispatchEvent(new tabA.dom.window.Event("change"));
+  await new Promise((r) => setTimeout(r, 80));
+  const hostB = tabB.dom.window.document.getElementById("fct-root");
+  check("B host data-theme dark", hostB.getAttribute("data-theme") === "dark");
+  check("A host data-theme dark", tabA.dom.window.document.getElementById("fct-root").getAttribute("data-theme") === "dark");
+
+  // Start pomodoro in A -> B shows running + same remaining in its date slot.
+  fire(tabA.dom, shA.querySelector(".fct-bubble"), "click"); // open A (and B)
+  await new Promise((r) => setTimeout(r, 30));
+  fire(tabA.dom, shA.querySelector(".fct-pomo-work"), "click");
+  await new Promise((r) => setTimeout(r, 120));
+  const bState = get(shB);
+  check("B shows running countdown", bState.chip === "running");
+  check("B date slot shows FOCUS + time", /^FOCUS 25:00$/.test(bState.bubble));
+
+  // Cancel in B -> both reset.
+  fire(tabB.dom, shB.querySelector(".fct-pomo-cancel"), "click");
+  await new Promise((r) => setTimeout(r, 80));
+  check("A reset after B cancels", get(shA).chip !== "running");
+
+  // Count total writes to prove no runaway loop.
+  const writeKeys = Object.keys(backend.store).filter((k) => k.startsWith("widget:"));
+  check("shared widget state keys bounded", writeKeys.length <= 8);
+}
+
 // ---------------------------------------------------------------------------
 // Service-worker harness
 // ---------------------------------------------------------------------------
 async function workerTests() {
   console.log("\n== worker ==");
+
   const store = {};
   const alarms = [];
   const notifications = [];
@@ -236,6 +323,7 @@ async function workerTests() {
 
 (async () => {
   await contentTests();
+  await twoTabSyncTests();
   await workerTests();
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
