@@ -1,8 +1,14 @@
 <div align="center">
 
+<img src="brand/LucClock-thumbnail.png" alt="LucClock — a floating 24-hour clock with timer and pomodoro" width="180">
+
 # LucClock
 
 **A calm, minimal clock for your browser — with a timer and pomodoro, floating on every tab.**
+
+[![Manifest V3](https://img.shields.io/badge/manifest-v3-3b82f6)](manifest.json)
+[![Version](https://img.shields.io/badge/version-1.0.0-1e293b)](manifest.json)
+[![License: MIT](https://img.shields.io/badge/license-MIT-64748b)](LICENSE)
 
 Built by **Lucas (Aizzul Luqman)** · Open to contributions
 
@@ -109,15 +115,18 @@ the extension card in `brave://extensions`.
 LucClock/
 ├── manifest.json            # MV3: content script, background worker, permissions
 ├── icons/                   # 16/48/128 px extension icons
-├── brand/                   # Brand assets (SVG mark)
+├── brand/                   # Mark, lockup, and the product thumbnail
 ├── lib/
 │   └── storage.js           # Settings / countdown / position persistence
 ├── content/
 │   └── content.js           # Self-contained widget: UI, drag, panel flip, clock, keyboard
-└── background/
-    ├── service-worker.js    # chrome.alarms + notifications + chime trigger
-    ├── offscreen.html       # MV3 audio playback surface
-    └── chime.wav            # Soft completion chime
+├── background/
+│   ├── service-worker.js    # chrome.alarms + notifications + chime trigger
+│   ├── offscreen.html       # MV3 audio playback surface
+│   └── chime.wav            # Soft completion chime
+└── scripts/
+    ├── make-thumbnail.py    # Outlines the wordmark from the system font
+    └── build-thumbnail.mjs  # Builds brand/LucClock-thumbnail.png
 ```
 
 ## Contributing
